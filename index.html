@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0b2a4a">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>Pulseira Monitor</title>
+<style>
+  :root { --azul:#0b2a4a; --azul2:#0b6bcb; --ok:#16a34a; --atencao:#f59e0b; --alto:#dc2626; --fundo:#eef2f7; --card:#fff; --texto:#111827; --suave:#6b7280; }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; margin: 0; }
+  body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; background: var(--fundo); color: var(--texto);
+         display: flex; flex-direction: column; width: 100%; max-width: 560px; min-height: 100dvh; margin: auto; overflow-x: hidden; }
+  header { background: linear-gradient(135deg, var(--azul), var(--azul2)); color: #fff; padding: calc(14px + env(safe-area-inset-top)) 18px 18px;
+           border-radius: 0 0 24px 24px; display: flex; justify-content: space-between; align-items: center; }
+  .titulo { font-size: 20px; font-weight: 700; } .titulo span { font-weight: 300; margin-left: 5px; }
+  .pill { font-size: 12px; padding: 6px 12px; border-radius: 999px; background: rgba(255,255,255,.18); }
+  .pill.on { background: #16a34a; } .pill.off { background: rgba(255,255,255,.18); }
+  main { flex: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 14px; padding-bottom: calc(100px + env(safe-area-inset-bottom)); }
+  .tab { display: none; } .tab.ativa { display: block; }
+  .card { background: var(--card); border-radius: 18px; padding: 16px; margin-bottom: 14px; box-shadow: 0 2px 10px rgba(15,23,42,.07); }
+  .rot { font-size: 12px; color: var(--suave); margin-bottom: 4px; }
+  h2 { font-size: 17px; margin: 4px 0 12px; }
+  .hero { text-align: center; padding: 22px 16px; }
+  .coracao { font-size: 64px; color: var(--alto); line-height: 1; display: inline-block; animation: bater 1s infinite; }
+  @keyframes bater { 0%,100% { transform: scale(1); } 15% { transform: scale(1.18); } 30% { transform: scale(1); } 45% { transform: scale(1.12); } }
+  .bpm { font-size: 54px; font-weight: 800; } .bpm small { font-size: 16px; font-weight: 400; color: var(--suave); margin-left: 4px; }
+  .duo { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .duo .card { margin-bottom: 0; } .duo + .card { margin-top: 14px; }
+  .valor { font-size: 30px; font-weight: 800; }
+  .badge { display: inline-block; margin-top: 6px; font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 999px; color: #fff; background: #9ca3af; }
+  .badge.ok { background: var(--ok); } .badge.atencao { background: var(--atencao); } .badge.alto { background: var(--alto); }
+  canvas { width: 100%; height: 110px; display: block; }
+  button { font: inherit; border: 0; border-radius: 14px; padding: 13px 16px; background: var(--azul2); color: #fff; font-weight: 600; cursor: pointer; }
+  button:active { transform: scale(.98); }
+  button.grande { width: 100%; font-size: 16px; padding: 16px; }
+  button.sec { background: #e5e7eb; color: #111827; } button.perigo { background: var(--alto); }
+  input[type=text], input[type=tel], input[type=number], input[type=url] { width: 100%; padding: 12px; border: 1px solid #d1d5db; border-radius: 12px; font: inherit; margin: 4px 0 10px; }
+  .linha { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 10px 0; border-bottom: 1px solid #f0f2f5; font-size: 14px; }
+  .linha:last-child { border-bottom: 0; }
+  .vazio { color: var(--suave); font-size: 14px; padding: 6px 0; }
+  .sw { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; }
+  .sw input { width: 22px; height: 22px; }
+  .aviso { font-size: 12px; color: var(--suave); margin-top: 8px; }
+  nav { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 560px; background: #fff; display: flex;
+        padding: 8px 4px calc(8px + env(safe-area-inset-bottom)); box-shadow: 0 -2px 14px rgba(15,23,42,.1); border-radius: 20px 20px 0 0; }
+  nav button { flex: 1; background: none; color: var(--suave); display: flex; flex-direction: column; align-items: center; font-size: 11px; padding: 6px; gap: 2px; border-radius: 12px; }
+  nav button span { font-size: 22px; } nav button.ativa { color: var(--azul2); background: #e8f1fc; }
+  #alerta { display: none; position: fixed; inset: 0; z-index: 50; color: #fff; text-align: center; flex-direction: column; align-items: center; justify-content: center;
+            padding: 24px; animation: piscar 1s infinite; }
+  @keyframes piscar { 0%,100% { background: #b91c1c; } 50% { background: #ef4444; } }
+  #alerta h1 { font-size: 34px; margin: 0 0 8px; }
+  #contagem { font-size: 96px; font-weight: 800; line-height: 1.1; }
+  #alerta button { font-size: 18px; padding: 16px 26px; margin: 6px; }
+  @media (max-width: 380px) {
+    main { padding: 10px; padding-bottom: calc(100px + env(safe-area-inset-bottom)); }
+    .duo { grid-template-columns: 1fr; gap: 10px; }
+    .duo .card { margin-bottom: 0; }
+    .bpm { font-size: 48px; }
+    .linha { flex-wrap: wrap; }
+    nav button { font-size: 10px; padding: 6px 2px; }
+  }
+  @media (min-width: 561px) { body { border-left: 1px solid #e5e7eb; border-right: 1px solid #e5e7eb; } }
+  button, input { touch-action: manipulation; }
+  input { font-size: 16px !important; }
+  .toast { position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%); background: #111827; color: #fff; padding: 10px 16px; border-radius: 999px; font-size: 13px; opacity: 0; transition: opacity .3s; pointer-events: none; z-index: 60; }
+  .toast.mostra { opacity: .95; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="titulo">Pulseira<span>Monitor</span></div>
+  <div class="pill off" id="pill">Desconectado</div>
+</header>
+
+<main>
+  <!-- INÍCIO -->
+  <section class="tab ativa" id="tab-inicio">
+    <div class="card hero">
+      <div class="coracao" id="coracao">♥</div>
+      <div class="bpm"><span id="vHr">--</span><small>bpm</small></div>
+      <div class="rot">Batimentos cardíacos</div>
+      <span class="badge" id="bHr">sem dados</span>
+    </div>
+    <div class="duo">
+      <div class="card"><div class="rot">Pressão arterial</div><div class="valor" id="vPressao">--/--</div><div class="rot">mmHg</div><span class="badge" id="bPressao">sem dados</span></div>
+      <div class="card"><div class="rot">Oxigênio no sangue</div><div class="valor" id="vSpo2">--</div><div class="rot">SpO2 %</div><span class="badge" id="bSpo2">sem dados</span></div>
+    </div>
+    <div class="card"><div class="rot">Pressão sistólica nas últimas leituras</div><canvas id="grafico"></canvas></div>
+    <button class="grande" id="btnConectar">Conectar à pulseira</button>
+  </section>
+
+  <!-- HISTÓRICO -->
+  <section class="tab" id="tab-historico">
+    <div class="card"><h2>Histórico de leituras</h2><div id="historico"></div>
+      <button class="sec" id="btnLimpar" style="margin-top:10px">Limpar histórico</button></div>
+  </section>
+
+  <!-- CONTATOS -->
+  <section class="tab" id="tab-contatos">
+    <div class="card"><h2>Contatos de emergência</h2><div id="listaContatos"></div></div>
+    <div class="card"><h2>Novo contato</h2>
+      <input type="text" id="cNome" placeholder="Nome">
+      <input type="tel" id="cTel" placeholder="Telefone com DDD (+5511999999999)">
+      <button class="grande" id="btnAddContato">Adicionar contato</button></div>
+  </section>
+
+  <!-- AJUSTES -->
+  <section class="tab" id="tab-ajustes">
+    <div class="card"><h2>Limites do alerta</h2>
+      <div class="rot">Pressão sistólica (máx.)</div><input type="number" id="limSys">
+      <div class="rot">Pressão diastólica (máx.)</div><input type="number" id="limDia">
+      <div class="rot">Oxigênio SpO2 (mín.)</div><input type="number" id="limSpo2">
+      <div class="rot">Tempo para cancelar (segundos)</div><input type="number" id="limSeg">
+      <div class="aviso">Defina os limites com orientação médica.</div></div>
+    <div class="card"><h2>Alerta</h2>
+      <label class="sw"><span>Som de sirene</span><input type="checkbox" id="optSom"></label>
+      <label class="sw"><span>Voz falando o alerta</span><input type="checkbox" id="optVoz"></label>
+      <label class="sw"><span>Vibração</span><input type="checkbox" id="optVib"></label>
+      <div class="rot" style="margin-top:8px">URL do backend (ligação automática, opcional)</div><input type="url" id="urlBackend" placeholder="https://...">
+      <button class="sec" id="btnTestarSom" style="margin-bottom:8px">Testar som</button>
+      <button class="grande" id="btnSalvarCfg">Salvar ajustes</button></div>
+    <div class="card"><h2>Testes</h2>
+      <button class="sec" id="btnSimular">Simular leitura normal</button>
+      <button class="perigo" id="btnSimularAlta">Simular alerta</button></div>
+    <button class="grande" id="btnInstalar" style="display:none">Instalar aplicativo</button>
+    <p class="aviso">Bluetooth: use Chrome no Android e abra o site por HTTPS. O app tenta primeiro o protocolo configurado e depois o padrão de frequência cardíaca (BLE 180D). Pressão e SpO2 dependem do protocolo específico da pulseira. Mantenha o app aberto. Protótipo: não substitui equipamento médico.</p>
+  </section>
+</main>
+
+<nav id="menu">
+  <button class="ativa" data-tab="inicio"><span>❤️</span>Início</button>
+  <button data-tab="historico"><span>📋</span>Histórico</button>
+  <button data-tab="contatos"><span>👥</span>Contatos</button>
+  <button data-tab="ajustes"><span>⚙️</span>Ajustes</button>
+</nav>
+
+<div id="alerta">
+  <h1>⚠️ ALERTA</h1>
+  <div id="msgAlerta" style="font-size:20px"></div>
+  <div id="contagem">30</div>
+  <div>Seus contatos serão acionados quando chegar a zero</div>
+  <div style="margin-top:18px">
+    <button id="btnCancelar" style="background:#fff;color:#b91c1c">Estou bem - cancelar</button>
+    <button id="btnLigarAgora" style="background:#111827">Ligar agora</button>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+// UUIDs genéricos do protótipo; fallback para o BLE padrão de frequência cardíaca.
+const SERVICE_UUID = '12345678-1234-1234-1234-1234567890ab';
+const CHAR_UUID    = '12345678-1234-1234-1234-1234567890ac';
+const HR_SERVICE = 0x180D;
+const HR_CHARACTERISTIC = 0x2A37;
+
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+function ler(k, p) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : p; } catch { return p; } }
+function gravar(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} }
+
+let contatos  = ler('contatos', []);
+let historico = ler('historico', []);
+let cfg = Object.assign({ sys: 180, dia: 120, spo2: 90, seg: 30, som: true, voz: true, vib: true, url: '' }, ler('cfg', {}));
+let alertaAtivo = false, alertaTeste = false, timer = null, ultima = null, wakeLock = null;
+let ultimoAlertaReal = 0;
+
+function toast(t) { const e = $('toast'); e.textContent = t; e.classList.add('mostra'); setTimeout(() => e.classList.remove('mostra'), 2200); }
+function estado(txt, on) { $('pill').textContent = txt; $('pill').className = 'pill ' + (on ? 'on' : 'off'); }
+
+// ===== Navegação por abas =====
+document.querySelectorAll('#menu button').forEach(b => b.onclick = () => {
+  document.querySelectorAll('#menu button').forEach(x => x.classList.toggle('ativa', x === b));
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('ativa', t.id === 'tab-' + b.dataset.tab));
+  desbloquearAudio();
+  if (b.dataset.tab === 'inicio') grafico();
+});
+
+// ===== Classificação =====
+function nivelPressao(l) { if (l.sys >= cfg.sys || l.dia >= cfg.dia) return 'alto'; if (l.sys >= 140 || l.dia >= 90) return 'atencao'; return 'ok'; }
+function nivelSpo2(l) { if (l.spo2 <= cfg.spo2) return 'alto'; if (l.spo2 < 94) return 'atencao'; return 'ok'; }
+function nivelHr(l) { return (l.hr > 120 || l.hr < 50) ? 'atencao' : 'ok'; }
+const nome = { ok: 'normal', atencao: 'atenção', alto: 'crítico' };
+function badge(id, n) { const e = $(id); e.className = 'badge ' + n; e.textContent = nome[n]; }
+function preocupante(l) { return nivelPressao(l) === 'alto' || nivelSpo2(l) === 'alto'; }
+
+// ===== Tela =====
+function desenhar() {
+  $('listaContatos').innerHTML = contatos.map((c, i) =>
+    `<div class="linha"><span><b>${esc(c.nome)}</b><br>${esc(c.telefone)}</span><button class="sec" onclick="remover(${i})">Remover</button></div>`).join('')
+    || '<div class="vazio">Nenhum contato cadastrado.</div>';
+  $('historico').innerHTML = historico.slice(0, 60).map(h => {
+    const n = (nivelPressao(h) === 'alto' || nivelSpo2(h) === 'alto') ? 'alto' : (nivelPressao(h) === 'atencao' || nivelSpo2(h) === 'atencao') ? 'atencao' : 'ok';
+    return `<div class="linha"><span>${new Date(h.ts).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
+      <span>${h.sys}/${h.dia} · ${h.hr} bpm · ${h.spo2}%</span><span class="badge ${n}">${nome[n]}</span></div>`;
+  }).join('') || '<div class="vazio">Sem leituras ainda.</div>';
+  $('limSys').value = cfg.sys; $('limDia').value = cfg.dia; $('limSpo2').value = cfg.spo2; $('limSeg').value = cfg.seg;
+  $('optSom').checked = cfg.som; $('optVoz').checked = cfg.voz; $('optVib').checked = cfg.vib; $('urlBackend').value = cfg.url;
+}
+function remover(i) { contatos.splice(i, 1); gravar('contatos', contatos); desenhar(); }
+
+function grafico() {
+  const c = $('grafico'), dpr = window.devicePixelRatio || 1, w = c.clientWidth, h = c.clientHeight;
+  if (!w) return;
+  c.width = w * dpr; c.height = h * dpr;
+  const g = c.getContext('2d'); g.scale(dpr, dpr); g.clearRect(0, 0, w, h);
+  const d = historico.slice(0, 30).reverse().map(x => x.sys);
+  if (d.length < 2) { g.fillStyle = '#9ca3af'; g.font = '13px system-ui'; g.fillText('Aguardando leituras...', 8, h / 2); return; }
+  const min = Math.min(...d, 90) - 5, max = Math.max(...d, 140) + 5;
+  const y = v => h - 6 - (v - min) / (max - min) * (h - 12);
+  g.strokeStyle = '#f59e0b55'; g.setLineDash([4, 4]); g.beginPath(); g.moveTo(0, y(140)); g.lineTo(w, y(140)); g.stroke(); g.setLineDash([]);
+  g.strokeStyle = '#dc2626'; g.lineWidth = 2.5; g.lineJoin = 'round'; g.beginPath();
+  d.forEach((v, i) => { const x = 6 + i * (w - 12) / (d.length - 1); i ? g.lineTo(x, y(v)) : g.moveTo(x, y(v)); });
+  g.stroke();
+}
+
+// ===== Leituras =====
+function tratar(l) {
+  ultima = l;
+  $('vHr').textContent = l.hr; $('vPressao').textContent = l.sys + '/' + l.dia; $('vSpo2').textContent = l.spo2;
+  badge('bHr', nivelHr(l)); badge('bPressao', nivelPressao(l)); badge('bSpo2', nivelSpo2(l));
+  $('coracao').style.animationDuration = (60 / Math.max(40, Math.min(180, l.hr))) + 's';
+  historico.unshift({ ts: Date.now(), sys: l.sys, dia: l.dia, hr: l.hr, spo2: l.spo2 });
+  historico = historico.slice(0, 200); gravar('historico', historico);
+  desenhar(); grafico();
+  if (preocupante(l) && !alertaAtivo && Date.now() - ultimoAlertaReal >= 5 * 60 * 1000) iniciarAlerta(l, false);
+}
+
+// ===== Som (sirene pelo Web Audio, sem arquivos) =====
+let audioCtx = null, sirene = null;
+function desbloquearAudio() {
+  try {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+  } catch {}
+}
+document.addEventListener('click', desbloquearAudio);
+document.addEventListener('touchstart', desbloquearAudio, { passive: true });
+
+function iniciarSirene() {
+  if (!cfg.som) return;
+  desbloquearAudio(); pararSirene();
+  if (!audioCtx) return;
+  const osc = audioCtx.createOscillator(), gain = audioCtx.createGain();
+  osc.type = 'square'; gain.gain.value = 0.4; osc.frequency.value = 650;
+  osc.connect(gain); gain.connect(audioCtx.destination); osc.start();
+  let alto = false;
+  const iv = setInterval(() => { alto = !alto; osc.frequency.setValueAtTime(alto ? 980 : 650, audioCtx.currentTime); }, 420);
+  sirene = { osc, iv };
+}
+function pararSirene() {
+  if (sirene) { clearInterval(sirene.iv); try { sirene.osc.stop(); } catch {} sirene = null; }
+  try { speechSynthesis.cancel(); } catch {}
+}
+function falar(texto) {
+  if (!cfg.voz) return;
+  try { const u = new SpeechSynthesisUtterance(texto); u.lang = 'pt-BR'; u.rate = 1; speechSynthesis.cancel(); speechSynthesis.speak(u); } catch {}
+}
+
+// ===== Alerta =====
+function iniciarAlerta(l, teste = false) {
+  if (alertaAtivo) clearInterval(timer);
+  alertaAtivo = true;
+  alertaTeste = teste;
+  if (!teste) ultimoAlertaReal = Date.now();
+  let restante = cfg.seg;
+  $('msgAlerta').textContent = (teste ? 'TESTE — ' : '') + `Pressão ${l.sys}/${l.dia} · ${l.hr} bpm · SpO2 ${l.spo2}%`;
+  $('alerta').querySelector('div:nth-of-type(3)').textContent = teste
+    ? 'Este é apenas um teste. Nenhum contato será acionado.'
+    : 'Seus contatos serão acionados quando chegar a zero';
+  $('btnLigarAgora').style.display = teste ? 'none' : 'inline-block';
+  $('contagem').textContent = restante;
+  $('alerta').style.display = 'flex';
+  iniciarSirene();
+  falar('Alerta! Leitura preocupante detectada. Os contatos serão acionados.');
+  if (cfg.vib && navigator.vibrate) navigator.vibrate([600, 250, 600, 250, 600]);
+  timer = setInterval(() => {
+    restante--; $('contagem').textContent = Math.max(0, restante);
+    if (cfg.vib && navigator.vibrate) navigator.vibrate(300);
+    if (restante <= 0) { clearInterval(timer); acionar(l); }
+  }, 1000);
+}
+function fecharAlerta() {
+  clearInterval(timer); pararSirene(); if (navigator.vibrate) navigator.vibrate(0);
+  $('alerta').style.display = 'none';
+  alertaAtivo = false;
+  alertaTeste = false;
+}
+async function acionar(l) {
+  if (alertaTeste) { fecharAlerta(); toast('Teste concluído. Nenhum contato foi acionado.'); return; }
+  if (cfg.url) {
+    try { await fetch(cfg.url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ leitura: l, contatos }) }); } catch {}
+  }
+  fecharAlerta();
+  if (contatos.length) window.location.href = 'tel:' + contatos[0].telefone;
+  else toast('Cadastre um contato de emergência');
+}
+$('btnCancelar').onclick = fecharAlerta;
+$('btnLigarAgora').onclick = () => { clearInterval(timer); acionar(ultima); };
+
+// ===== Botões =====
+$('btnAddContato').onclick = () => {
+  const n = $('cNome').value.trim(), t = $('cTel').value.trim();
+  if (!n || !t) { toast('Preencha nome e telefone'); return; }
+  contatos.push({ nome: n, telefone: t }); gravar('contatos', contatos);
+  $('cNome').value = ''; $('cTel').value = ''; desenhar(); toast('Contato adicionado');
+};
+$('btnSalvarCfg').onclick = () => {
+  cfg = { sys: +$('limSys').value || 180, dia: +$('limDia').value || 120, spo2: +$('limSpo2').value || 90, seg: Math.max(5, +$('limSeg').value || 30),
+          som: $('optSom').checked, voz: $('optVoz').checked, vib: $('optVib').checked, url: $('urlBackend').value.trim() };
+  gravar('cfg', cfg); toast('Ajustes salvos');
+};
+$('btnLimpar').onclick = () => { if (confirm('Apagar todo o histórico?')) { historico = []; gravar('historico', historico); desenhar(); grafico(); } };
+$('btnTestarSom').onclick = () => {
+  const som = cfg.som; cfg.som = true; iniciarSirene(); cfg.som = som;
+  setTimeout(pararSirene, 2500);
+};
+$('btnSimular').onclick = () => { desbloquearAudio(); tratar({ sys: 118 + Math.floor(Math.random() * 12), dia: 76 + Math.floor(Math.random() * 8), hr: 68 + Math.floor(Math.random() * 14), spo2: 96 + Math.floor(Math.random() * 3) }); };
+$('btnSimularAlta').onclick = () => {
+  desbloquearAudio();
+  if (alertaAtivo) fecharAlerta();
+  iniciarAlerta({ sys: 190, dia: 125, hr: 112, spo2: 91 }, true);
+};
+
+// ===== Bluetooth (Web Bluetooth - Chrome Android, exige HTTPS) =====
+async function manterTelaLigada() {
+  try { if ('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen'); } catch {}
+}
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && $('pill').classList.contains('on')) manterTelaLigada(); });
+
+let dispositivoBLE = null, caracteristicaBLE = null;
+function interpretarLeituraBLE(valor) {
+  try {
+    const bytes = valor.buffer.slice(valor.byteOffset, valor.byteOffset + valor.byteLength);
+    const obj = JSON.parse(new TextDecoder().decode(bytes));
+    if (obj && Number.isFinite(+obj.hr) && Number.isFinite(+obj.sys) && Number.isFinite(+obj.dia) && Number.isFinite(+obj.spo2)) {
+      tratar({ hr: +obj.hr, sys: +obj.sys, dia: +obj.dia, spo2: +obj.spo2 });
+      return;
+    }
+  } catch {}
+  if (valor.byteLength >= 2) {
+    const flags = valor.getUint8(0);
+    const hr = (flags & 0x01) ? valor.getUint16(1, true) : valor.getUint8(1);
+    if (hr > 0 && hr < 250) {
+      $('vHr').textContent = hr;
+      badge('bHr', nivelHr({ hr }));
+      $('coracao').style.animationDuration = (60 / Math.max(40, Math.min(180, hr))) + 's';
+      toast('Frequência cardíaca recebida. Pressão e SpO2 exigem protocolo próprio.');
+    }
+  }
+}
+$('btnConectar').onclick = async () => {
+  desbloquearAudio();
+  if (!navigator.bluetooth) {
+    estado('Bluetooth indisponível', false);
+    toast('Abra em HTTPS no Chrome para Android ou navegador compatível com Web Bluetooth.');
+    return;
+  }
+  try {
+    estado('Procurando...', false);
+    const disp = await navigator.bluetooth.requestDevice({ acceptAllDevices: true, optionalServices: [SERVICE_UUID, HR_SERVICE] });
+    dispositivoBLE = disp;
+    disp.addEventListener('gattserverdisconnected', () => {
+      caracteristicaBLE = null; estado('Desconectado', false);
+      $('btnConectar').textContent = 'Reconectar à pulseira';
+      toast('Pulseira desconectada. Toque para reconectar.');
+    });
+    const servidor = await disp.gatt.connect();
+    let carac;
+    try {
+      const servico = await servidor.getPrimaryService(SERVICE_UUID);
+      carac = await servico.getCharacteristic(CHAR_UUID);
+    } catch (e) {
+      const servicoHR = await servidor.getPrimaryService(HR_SERVICE);
+      carac = await servicoHR.getCharacteristic(HR_CHARACTERISTIC);
+    }
+    caracteristicaBLE = carac;
+    await carac.startNotifications();
+    carac.addEventListener('characteristicvaluechanged', e => interpretarLeituraBLE(e.target.value));
+    estado('Conectado', true);
+    $('btnConectar').textContent = 'Conectado — reconectar';
+    toast('Conectado a ' + (disp.name || 'dispositivo Bluetooth'));
+    manterTelaLigada();
+  } catch (e) {
+    estado('Falha na conexão', false);
+    toast('Bluetooth: ' + (e && e.message ? e.message : 'não foi possível conectar'));
+  }
+};
+
+// ===== Instalação como aplicativo =====
+let eventoInstalar = null;
+window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); eventoInstalar = e; $('btnInstalar').style.display = 'block'; });
+$('btnInstalar').onclick = async () => { if (!eventoInstalar) return; eventoInstalar.prompt(); await eventoInstalar.userChoice; eventoInstalar = null; $('btnInstalar').style.display = 'none'; };
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+window.addEventListener('resize', grafico);
+
+desenhar(); grafico();
+</script>
+</body>
+</html>
