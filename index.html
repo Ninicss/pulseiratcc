@@ -154,8 +154,8 @@
 
 <script>
 // UUIDs genéricos do protótipo; fallback para o BLE padrão de frequência cardíaca.
-const SERVICE_UUID = '12345678-1234-1234-1234-1234567890ab';
-const CHAR_UUID    = '12345678-1234-1234-1234-1234567890ac';
+const SERVICE_UUID = '4fafc201-1fb5-459e-8fcc-c5c9c331914b';
+const CHAR_UUID    = 'beb5483e-36e1-4688-b7f5-ea07361b26a8';
 const HR_SERVICE = 0x180D;
 const HR_CHARACTERISTIC = 0x2A37;
 
@@ -335,14 +335,44 @@ document.addEventListener('visibilitychange', () => { if (document.visibilitySta
 
 let dispositivoBLE = null, caracteristicaBLE = null;
 function interpretarLeituraBLE(valor) {
+  // Protocolo da Pulseira Monitor: M/A,bpm,spo2,sistolica,diastolica,dedo(0|1)
+  // M = leitura normal; A = leitura sinalizada como alerta pelo ESP32.
   try {
     const bytes = valor.buffer.slice(valor.byteOffset, valor.byteOffset + valor.byteLength);
-    const obj = JSON.parse(new TextDecoder().decode(bytes));
-    if (obj && Number.isFinite(+obj.hr) && Number.isFinite(+obj.sys) && Number.isFinite(+obj.dia) && Number.isFinite(+obj.spo2)) {
+    const texto = new TextDecoder().decode(bytes).trim();
+
+    if (texto.startsWith('M,') || texto.startsWith('A,')) {
+      const partes = texto.split(',');
+      if (partes.length >= 6) {
+        const tipo = partes[0];
+        const hr = Number(partes[1]);
+        const spo2 = Number(partes[2]);
+        const sys = Number(partes[3]);
+        const dia = Number(partes[4]);
+        const dedo = Number(partes[5]);
+
+        // Ignora leituras sem dedo/sensor posicionado e valores inválidos.
+        if (dedo !== 1 || ![hr, spo2, sys, dia].every(Number.isFinite) ||
+            hr <= 0 || hr >= 250 || spo2 <= 0 || spo2 > 100 ||
+            sys <= 0 || dia <= 0) return;
+
+        const leitura = { hr, spo2, sys, dia };
+        tratar(leitura);
+        if (tipo === 'A' && !alertaAtivo) iniciarAlerta(leitura, false);
+        return;
+      }
+    }
+
+    // Compatibilidade com dispositivos que enviam JSON.
+    const obj = JSON.parse(texto);
+    if (obj && Number.isFinite(+obj.hr) && Number.isFinite(+obj.sys) &&
+        Number.isFinite(+obj.dia) && Number.isFinite(+obj.spo2)) {
       tratar({ hr: +obj.hr, sys: +obj.sys, dia: +obj.dia, spo2: +obj.spo2 });
       return;
     }
   } catch {}
+
+  // Compatibilidade com o serviço BLE padrão de frequência cardíaca (180D).
   if (valor.byteLength >= 2) {
     const flags = valor.getUint8(0);
     const hr = (flags & 0x01) ? valor.getUint16(1, true) : valor.getUint8(1);
